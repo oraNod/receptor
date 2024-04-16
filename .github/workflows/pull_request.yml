@@ -3,9 +3,7 @@ name: CI
 
 on:  # yamllint disable-line rule:truthy
   pull_request:  # yamllint disable-line rule:empty-values
-
-env:
-  PYTHON_MATRIX: 3.8, 3.9, 3.10, 3.11
+  workflow_dispatch:
 
 jobs:
   lint-receptor:
@@ -24,22 +22,6 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: v1.56
-  lint-receptorctl:
-    name: lint-receptorctl
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup nox
-        uses: wntrblm/nox@2024.04.15
-        with:
-          python-versions: ${{ env.PYTHON_MATRIX }}
-
-      - name: Run receptorctl linters
-        run: make receptorctl-lint
   receptor:
     name: receptor (Go ${{ matrix.go-version }})
     runs-on: ubuntu-latest
@@ -107,29 +89,43 @@ jobs:
   receptorctl:
     name: receptorctl
     needs: receptor
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - ubuntu
+        include:
+        - session: lint
+          python-versions: 3.11
+        - session: tests
+          python-versions: 3.8, 3.9, 3.10, 3.11
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Download receptor
-        uses: actions/download-artifact@v4
-        with:
-          name: receptor
-          path: /usr/local/bin/
+    - name: Download receptor
+      uses: actions/download-artifact@v4
+      with:
+        name: receptor
+        path: /usr/local/bin/
 
-      - name: Fix permissions on receptor binary
-        run: sudo chmod a+x /usr/local/bin/receptor
+    - name: Fix permissions on receptor binary
+      run: sudo chmod a+x /usr/local/bin/receptor
 
-      - name: Setup nox
-        uses: wntrblm/nox@2024.04.15
-        with:
-          python-versions: ${{ env.PYTHON_MATRIX }}
+    - name: Setup nox
+      uses: wntrblm/nox@2024.04.15
+      with:
+        python-versions: ${{ matrix.python-versions }}
 
-      - name: Run receptorctl tests
-        run: make receptorctl-test
+    - name: Run receptorctl nox ${{ matrix.session }} session
+      run: |
+        nox -s ${{ matrix.session }}
+      working-directory: ./receptorctl
+
   container:
     name: container
     runs-on: ubuntu-latest
