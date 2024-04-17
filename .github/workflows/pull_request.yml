@@ -87,45 +87,10 @@ jobs:
           name: receptor
           path: /usr/local/bin/receptor
   receptorctl:
-    name: receptorctl
     needs: receptor
-    runs-on: ${{ matrix.os }}-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-        - ubuntu
-        include:
-        - session: lint
-          python-versions: 3.11
-        - session: tests
-          python-versions: 3.8, 3.9, 3.10, 3.11
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Download receptor
-      uses: actions/download-artifact@v4
-      with:
-        name: receptor
-        path: /usr/local/bin/
-
-    - name: Fix permissions on receptor binary
-      run: sudo chmod a+x /usr/local/bin/receptor
-
-    - name: Setup nox
-      uses: wntrblm/nox@2024.04.15
-      with:
-        python-versions: ${{ matrix.python-versions }}
-
-    - name: Run receptorctl nox ${{ matrix.session }} session
-      run: |
-        nox -s ${{ matrix.session }}
-      working-directory: ./receptorctl
-
+    uses: ./.github/workflows/receptorctl.yml
+  lint-receptorctl:
+    uses: ./.github/workflows/receptorctl_checks.yml
   container:
     name: container
     runs-on: ubuntu-latest

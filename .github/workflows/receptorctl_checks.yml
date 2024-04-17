@@ -1,0 +1,34 @@
+---
+name: lint-receptorctl
+
+"on":
+  workflow_call:
+
+jobs:
+  lint-receptorctl:
+    runs-on: "${{ matrix.os }}-latest"
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - ubuntu
+        python-version:
+        - 3.11
+        session:
+        - lint
+    name: "Check receptorctl code style and formatting"
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup nox
+      uses: wntrblm/nox@2024.04.15
+      with:
+        python-versions: "${{ matrix.python-version }}"
+
+    - name: "Run receptorctl nox ${{ matrix.session }} session"
+      run: |
+        nox -s "${{ matrix.session }}"
+      working-directory: ./receptorctl
